@@ -143,6 +143,19 @@ Run these commands from the repository root:
 
    Grafana's default initial login is commonly `admin` / `admin`; change the password when prompted. If the instance has already been configured, use the password set for that Grafana instance.
 
+## Public Live Demo
+
+<https://autohealops-demo.onrender.com>
+
+The FastAPI application is deployed and live on Render. The root endpoint has returned HTTP 200 in the deployment logs.
+
+- [Open API home](https://autohealops-demo.onrender.com/)
+- [Health endpoint](https://autohealops-demo.onrender.com/health)
+- [Prometheus metrics endpoint](https://autohealops-demo.onrender.com/metrics)
+- [Render service dashboard](https://dashboard.render.com/web/srv-dbmo64qjnfac73b1lrc0)
+
+The Render deployment publishes the FastAPI API only. Prometheus, Grafana, and the PowerShell watchdog remain part of the local Docker Compose setup unless separately deployed/configured.
+
 ## Publish a Public API Demo on Render
 
 You can deploy the FastAPI application from this GitHub repository using Render's free web-service plan for a portfolio/demo. The Dockerfile reads the hosting platform's `PORT` environment variable, so it can use Render's assigned port.
