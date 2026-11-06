@@ -52,14 +52,13 @@ refresh();setInterval(refresh,5000);
 async function checkMonitoring(){
   const p=document.getElementById("promStatus"),t=document.getElementById("targetStatus");
   try{
-    const r=await fetch("https://autohealops-prometheus-live.onrender.com/api/v1/targets",{cache:"no-store"});
-    if(!r.ok) throw new Error("Prometheus unavailable");
+    const r=await fetch("/api/monitoring",{cache:"no-store"});
+    if(!r.ok) throw new Error("Monitoring status unavailable");
     const j=await r.json();
-    const active=(j.data&&j.data.activeTargets)||[];
-    const target=active.find(x=>(x.labels&&x.labels.job)==="autohealops-public-api");
-    p.textContent="ONLINE";p.className="ok";
-    t.textContent=target?target.health.toUpperCase():"TARGET NOT FOUND";
-    t.className=target&&target.health==="up"?"ok":"warn";
+    p.textContent=(j.prometheus||"unavailable").toUpperCase();
+    p.className=j.prometheus==="online"?"ok":"warn";
+    t.textContent=(j.target||"not_verified").toUpperCase();
+    t.className=j.target==="up"?"ok":"warn";
   }catch(e){p.textContent="UNAVAILABLE";p.className="warn";t.textContent="NOT VERIFIED";t.className="warn";}
 }
 checkMonitoring();setInterval(checkMonitoring,15000);
