@@ -27,7 +27,7 @@ Controlled test:
 1. Keep the watchdog running.
 2. Run docker compose stop app in another terminal.
 3. Wait up to 30 seconds for the watchdog to detect the stopped app.
-4. It should run docker compose restart app or docker compose up -d app if the container is missing.
+4. The current script attempts docker restart autohealops-app-1. Check docker compose ps first; if the generated container name differs, update $ContainerName in autoheal.ps1 before testing.
 5. Confirm http://localhost:8000/health returns a healthy response.
 6. If configured, confirm Telegram receives unhealthy and recovered messages.
 
