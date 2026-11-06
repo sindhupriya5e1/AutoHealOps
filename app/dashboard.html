@@ -20,10 +20,47 @@
 <div class="links"><a href="/health">Health JSON ↗</a><a href="/metrics">Prometheus metrics ↗</a><a href="/docs">API docs ↗</a><a href="/api/info">Project info ↗</a><a href="https://autohealops-grafana-live.onrender.com">Public Grafana ↗</a><a href="https://autohealops-prometheus-live.onrender.com">Prometheus UI ↗</a></div></div>
 <div class="card"><h3 class="section-title">Project components</h3><div class="list">
 <div class="item"><span>FastAPI + psutil</span><span class="ok">Public demo</span></div><div class="item"><span>Prometheus scraping</span><span class="ok">Public service</span></div><div class="item"><span>Grafana dashboards</span><span class="ok">Public service</span></div><div class="item"><span>PowerShell watchdog</span><span class="ok">Local host</span></div><div class="item"><span>Telegram alerts</span><span class="ok">Optional</span></div><div class="item"><span>Docker Compose</span><span class="ok">Local stack</span></div></div></div></section>
+
+<section class="card" style="margin-top:16px">
+  <h3 class="section-title">Grafana — live resource monitoring</h3>
+  <p class="muted">Embedded Grafana dashboard. If it does not load, use the Open Grafana link.</p>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0">
+    <a href="https://autohealops-grafana-live.onrender.com" target="_blank" rel="noopener">Open Grafana ↗</a>
+    <a href="https://autohealops-prometheus-live.onrender.com/targets" target="_blank" rel="noopener">Prometheus targets ↗</a>
+  </div>
+  <iframe title="AutoHealOps Grafana dashboard" src="https://autohealops-grafana-live.onrender.com/d/autohealops-live/autohealops-live?orgId=1&refresh=15s&kiosk" style="width:100%;height:650px;border:1px solid #26334e;border-radius:12px;background:#121a2d" loading="lazy"></iframe>
+</section>
+<section class="lower" style="margin-top:16px">
+  <div class="card"><h3 class="section-title">Prometheus scraper</h3>
+    <div class="item"><span>Prometheus service</span><strong id="promStatus" class="warn">Checking…</strong></div>
+    <div class="item"><span>FastAPI scrape target</span><strong id="targetStatus" class="warn">Checking…</strong></div>
+    <p class="sub">This checks the public Prometheus service and its target state.</p>
+  </div>
+  <div class="card"><h3 class="section-title">Self-healing recovery</h3>
+    <div class="item"><span>PowerShell watchdog</span><strong class="warn">Local host only</strong></div>
+    <div class="item"><span>Docker restart test</span><strong class="warn">Run locally</strong></div>
+    <p class="sub">The watchdog can restart the Docker container on the machine where it runs. The public Render demo cannot restart your laptop. No cloud recovery controller is configured yet.</p>
+  </div>
+</section>
 <div class="notice"><strong>Deployment scope:</strong> Public deployment: FastAPI metrics are scraped by the hosted Prometheus service and visualized in hosted Grafana. The PowerShell watchdog and Docker container-recovery demonstration run locally on the project host; they do not restart the public Render service. Public metrics describe the Render container, not your laptop.</div>
 <footer class="foot"><span>Built by Sindhupriya Abbineni · AutoHealOps v1.1.0</span><span>Metrics refresh every 5 seconds</span></footer></main>
 <script>
 const setMetric=(id,bar,value)=>{const n=Number(value);document.getElementById(id).textContent=Number.isFinite(n)?n.toFixed(1):"--";document.getElementById(bar).style.width=Math.max(0,Math.min(100,n||0))+"%";};
 async function refresh(){try{const [h,m]=await Promise.all([fetch("/health",{cache:"no-store"}),fetch("/api/metrics",{cache:"no-store"})]);if(!h.ok||!m.ok)throw new Error("API returned an error");const health=await h.json(),v=await m.json();setMetric("cpu","cpuBar",v.cpu_percent);setMetric("memory","memoryBar",v.memory_percent);setMetric("disk","diskBar",v.disk_percent);document.getElementById("apiStatus").textContent="ONLINE";document.getElementById("healthStatus").textContent=health.status.toUpperCase();document.getElementById("metricStatus").textContent="RESPONDING";["apiStatus","healthStatus","metricStatus"].forEach(id=>document.getElementById(id).className="ok");document.getElementById("liveState").textContent="Live API connected";document.getElementById("updated").textContent=new Date().toLocaleTimeString();}catch(e){document.getElementById("liveState").textContent="API unavailable";["apiStatus","healthStatus","metricStatus"].forEach(id=>{document.getElementById(id).textContent="UNAVAILABLE";document.getElementById(id).className="warn";});}}
 refresh();setInterval(refresh,5000);
+
+async function checkMonitoring(){
+  const p=document.getElementById("promStatus"),t=document.getElementById("targetStatus");
+  try{
+    const r=await fetch("https://autohealops-prometheus-live.onrender.com/api/v1/targets",{cache:"no-store"});
+    if(!r.ok) throw new Error("Prometheus unavailable");
+    const j=await r.json();
+    const active=(j.data&&j.data.activeTargets)||[];
+    const target=active.find(x=>(x.labels&&x.labels.job)==="autohealops-public-api");
+    p.textContent="ONLINE";p.className="ok";
+    t.textContent=target?target.health.toUpperCase():"TARGET NOT FOUND";
+    t.className=target&&target.health==="up"?"ok":"warn";
+  }catch(e){p.textContent="UNAVAILABLE";p.className="warn";t.textContent="NOT VERIFIED";t.className="warn";}
+}
+checkMonitoring();setInterval(checkMonitoring,15000);
 </script></body></html>
