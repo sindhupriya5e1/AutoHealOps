@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "autohealops-public-api"
+    metrics_path: "/metrics"
+    scheme: https
+    static_configs:
+      - targets: ["autohealops-demo.onrender.com"]
+        labels:
+          app: "AutoHealOps"
+          environment: "render-demo"
