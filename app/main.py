@@ -99,3 +99,38 @@ def metrics_json():
 def prometheus_metrics():
     collect_metrics()
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.get("/api/monitoring")
+def monitoring_status():
+    """Server-side Prometheus status proxy; avoids browser cross-origin restrictions."""
+    prometheus_url = os.getenv(
+        "PROMETHEUS_URL",
+        "https://autohealops-prometheus-live.onrender.com"
+    ).rstrip("/")
+    try:
+        response = requests.get(
+            f"{prometheus_url}/api/v1/targets",
+            params={"state": "active"},
+            timeout=8,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        targets = payload.get("data", {}).get("activeTargets", [])
+        api_target = next(
+            (target for target in targets
+             if target.get("labels", {}).get("job") == "autohealops-public-api"),
+            None,
+        )
+        return {
+            "prometheus": "online",
+            "target": api_target.get("health", "unknown") if api_target else "not_found",
+            "last_scrape": api_target.get("lastScrape") if api_target else None,
+            "scrape_url": api_target.get("scrapeUrl") if api_target else None,
+        }
+    except (requests.RequestException, ValueError) as error:
+        return {
+            "prometheus": "unavailable",
+            "target": "not_verified",
+            "error": str(error),
+        }
