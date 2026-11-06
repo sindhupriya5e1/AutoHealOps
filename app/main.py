@@ -81,7 +81,7 @@ def info():
         "status": "Running",
         "version": app.version,
         "components": ["FastAPI", "psutil", "Prometheus", "Grafana", "Docker Compose", "PowerShell Watchdog", "Telegram"],
-        "scope": "Public demo hosts FastAPI only. Prometheus, Grafana and the host watchdog run in the local Docker Compose setup.",
+        "scope": "Public demo: FastAPI metrics are scraped by hosted Prometheus and visualized in hosted Grafana. PowerShell watchdog and Docker recovery remain a local-host demonstration.",
     }
 
 
