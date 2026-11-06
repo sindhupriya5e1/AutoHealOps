@@ -4,6 +4,6 @@ datasources:
     type: prometheus
     uid: prometheus
     access: proxy
-    url: https://autohealops-prometheus.onrender.com
+    url: https://autohealops-prometheus-live.onrender.com
     isDefault: true
     editable: false
