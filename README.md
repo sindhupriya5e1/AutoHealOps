@@ -109,7 +109,7 @@ In a separate PowerShell window at the repository root:
 
     .\autoheal.ps1
 
-The watchdog discovers the app container with docker compose ps -q app, checks http://localhost:8000/health every 30 seconds, and attempts docker compose restart app if unhealthy. If the container is missing, it attempts docker compose up -d app. Telegram notifications are optional for the watchdog.
+The current watchdog script targets the Compose container name autohealops-app-1, checks http://localhost:8000/health every 30 seconds, and runs docker restart autohealops-app-1 when the app is unhealthy. Confirm the actual name with docker compose ps and update $ContainerName in autoheal.ps1 if your Compose project generates a different name. The current script requires a .env file with Telegram bot token and chat ID.
 
 ### Controlled recovery test
 
