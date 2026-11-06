@@ -14,7 +14,12 @@ AutoHealOps is a containerized DevOps project that monitors CPU, memory and disk
 - [Interactive API documentation](https://autohealops-demo.onrender.com/docs)
 - [Project information](https://autohealops-demo.onrender.com/api/info)
 
-The public Render deployment hosts the FastAPI application and dashboard. The resource figures on the public page belong to the hosted container. The complete Prometheus + Grafana + Docker Compose + PowerShell watchdog recovery workflow runs locally. The public service cannot monitor or restart a personal laptop.
+The public portfolio deployment now includes three Render services:
+- [FastAPI dashboard](https://autohealops-demo.onrender.com/)
+- [Prometheus UI](https://autohealops-prometheus.onrender.com/)
+- [Grafana dashboard](https://autohealops-grafana.onrender.com/)
+
+The hosted Prometheus service scrapes the public FastAPI `/metrics` endpoint. Grafana is provisioned with a Prometheus data source and an AutoHealOps CPU, memory and disk dashboard. Public hosted metrics describe the Render API container, not the user's personal laptop. Render free services may sleep after inactivity and their local data is ephemeral; this is a portfolio demo rather than production monitoring. The PowerShell watchdog and controlled container-recovery test remain host-side/local because a cloud service cannot restart a personal laptop's Docker container.
 
 ## Actual project evidence
 
@@ -69,7 +74,7 @@ See the [architecture diagram PDF](./AutoHealOps_Architecture_Diagram.pdf).
 | Docker + Docker Compose | Containerization and local orchestration |
 | PowerShell | Host-side health watchdog and recovery |
 | Telegram Bot API | Threshold, failure and recovery notifications |
-| Render | Public FastAPI demo hosting |
+| Render | Public FastAPI, Prometheus and Grafana demo hosting |
 | GitHub | Source control and documentation |
 
 ## Run the complete stack locally
@@ -134,10 +139,9 @@ An alert is sent when a metric first crosses its threshold. It can alert again a
 
 ## Deployment notes and limitations
 
-- Render hosts the FastAPI dashboard/API only. Public /metrics exposes metrics for the Render container.
-- Prometheus, Grafana and the PowerShell watchdog remain part of the local Compose setup.
-- Render free instances may spin down after inactivity and may restart. This is a portfolio demo, not production-grade monitoring.
-- The host watchdog cannot restart the remote Render service.
+- Render hosts the FastAPI dashboard/API, Prometheus scraper and Grafana dashboard as separate public demo services.
+- Public metrics describe the hosted FastAPI container. The PowerShell watchdog remains part of the local Compose setup and cannot restart a personal laptop from the cloud.
+- Render free services may spin down after inactivity; Prometheus/Grafana data on ephemeral filesystems may be lost on restart. This is a portfolio demo, not production-grade monitoring.
 - The current Compose file does not persist Prometheus or Grafana data.
 
 ## Project evidence and source
