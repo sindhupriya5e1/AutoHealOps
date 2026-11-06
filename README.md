@@ -16,8 +16,8 @@ AutoHealOps is a containerized DevOps project that monitors CPU, memory and disk
 
 The public portfolio deployment now includes three Render services:
 - [FastAPI dashboard](https://autohealops-demo.onrender.com/)
-- [Prometheus UI](https://autohealops-prometheus.onrender.com/)
-- [Grafana dashboard](https://autohealops-grafana.onrender.com/)
+- [Prometheus UI](https://autohealops-prometheus-live.onrender.com/)
+- [Grafana dashboard](https://autohealops-grafana-live.onrender.com/)
 
 The hosted Prometheus service scrapes the public FastAPI `/metrics` endpoint. Grafana is provisioned with a Prometheus data source and an AutoHealOps CPU, memory and disk dashboard. Public hosted metrics describe the Render API container, not the user's personal laptop. Render free services may sleep after inactivity and their local data is ephemeral; this is a portfolio demo rather than production monitoring. The PowerShell watchdog and controlled container-recovery test remain host-side/local because a cloud service cannot restart a personal laptop's Docker container.
 
