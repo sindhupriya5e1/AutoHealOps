@@ -69,7 +69,6 @@ AutoHealOps/
 ├── docker-compose.yml
 ├── Dockerfile
 ├── requirements.txt
-├── .env.example
 ├── .gitignore
 └── README.md
 ```
@@ -97,19 +96,7 @@ $PSVersionTable.PSVersion
 
 ## Configuration
 
-The Compose configuration expects a local `.env` file. Create it from the example:
-
-**PowerShell**
-```powershell
-Copy-Item .env.example .env
-```
-
-**Linux / macOS**
-```bash
-cp .env.example .env
-```
-
-Add your Telegram credentials to `.env`:
+The Compose configuration expects a local `.env` file. Create a file named `.env` in the repository root and add your Telegram credentials:
 
 ```env
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
