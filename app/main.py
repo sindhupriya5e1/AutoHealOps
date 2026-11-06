@@ -1,162 +1,101 @@
-
-from fastapi import FastAPI
-from fastapi.responses import Response
 from datetime import datetime
-import psutil
+from pathlib import Path
 import os
+
+import psutil
 import requests
 from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse, Response
+from prometheus_client import CONTENT_TYPE_LATEST, Gauge, generate_latest
 
-from prometheus_client import (
-    Gauge,
-    generate_latest,
-    CONTENT_TYPE_LATEST
-)
-
-# Load environment variables
 load_dotenv()
+app = FastAPI(title="AutoHealOps", description="DevOps monitoring, alerting and self-healing demo", version="1.1.0")
 
-app = FastAPI(
-    title="AutoHealOps",
-    description="Intelligent DevOps Monitoring Platform",
-    version="1.0.0"
-)
+cpu_metric = Gauge("system_cpu_percent", "CPU usage percentage")
+memory_metric = Gauge("system_memory_percent", "Memory usage percentage")
+disk_metric = Gauge("system_disk_percent", "Disk usage percentage")
 
-# Prometheus metrics
-cpu_metric = Gauge(
-    "system_cpu_percent",
-    "CPU usage percentage"
-)
-
-memory_metric = Gauge(
-    "system_memory_percent",
-    "Memory usage percentage"
-)
-
-disk_metric = Gauge(
-    "system_disk_percent",
-    "Disk usage percentage"
-)
-
-# Telegram configuration
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-
-# Alert thresholds
-CPU_THRESHOLD = 80
-MEMORY_THRESHOLD = 80
-DISK_THRESHOLD = 85
-
-# Prevent repeated alerts
-alert_states = {
-    "CPU": False,
-    "Memory": False,
-    "Disk": False
-}
+CPU_THRESHOLD, MEMORY_THRESHOLD, DISK_THRESHOLD = 80, 80, 85
+alert_states = {"CPU": False, "Memory": False, "Disk": False}
 
 
-# Send Telegram notification
-def send_telegram_alert(metric, value, threshold):
-
+def send_telegram_alert(metric: str, value: float, threshold: int) -> None:
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print("Telegram credentials missing")
+        print("Telegram credentials not configured; alert skipped.")
         return
-
     message = (
-        f"🚨 AutoHealOps Alert!\n\n"
-        f"Metric: {metric}\n"
-        f"Current Usage: {value}%\n"
-        f"Threshold: {threshold}%\n"
-        f"Status: WARNING\n"
-        f"Time: {datetime.now().isoformat()}"
+        f"AutoHealOps Alert!\nMetric: {metric}\nCurrent Usage: {value}%\n"
+        f"Threshold: {threshold}%\nStatus: WARNING\nTime: {datetime.now().astimezone().isoformat()}"
     )
-
     try:
         response = requests.post(
             f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
-            data={
-                "chat_id": TELEGRAM_CHAT_ID,
-                "text": message
-            },
-            timeout=5
+            data={"chat_id": TELEGRAM_CHAT_ID, "text": message},
+            timeout=5,
         )
-
         response.raise_for_status()
-
-        result = response.json()
-
-        if result.get("ok"):
-            print(f"Telegram {metric} alert sent successfully")
-        else:
-            print("Telegram API returned an error:", result)
-
+        print(f"Telegram {metric} alert sent successfully.")
     except requests.RequestException as error:
-        print("Telegram alert failed:", error)
+        print(f"Telegram alert failed: {error}")
 
 
-# Check threshold
-def check_alert(metric, value, threshold):
-
+def check_alert(metric: str, value: float, threshold: int) -> None:
     is_high = value >= threshold
-    was_high = alert_states.get(metric, False)
-
-    if is_high and not was_high:
+    if is_high and not alert_states[metric]:
         send_telegram_alert(metric, value, threshold)
-
     alert_states[metric] = is_high
 
 
-# Home endpoint
-@app.get("/")
-def home():
-
-    return {
-        "project": "AutoHealOps",
-        "status": "Running",
-        "message": "DevOps Monitoring Platform is Online"
-    }
-
-
-# Health endpoint
-@app.get("/health")
-def health():
-
-    return {
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat()
-    }
-
-
-# Monitoring endpoint
-@app.get("/metrics")
-def metrics():
-
-    # CPU usage
-    cpu = psutil.cpu_percent(interval=1)
-
-    # Memory usage
-    mem = psutil.virtual_memory()
-
-    memory = round(
-        ((mem.total - mem.available) / mem.total) * 100,
-        2
-    )
-
-    # Disk usage inside Docker container
-    disk = psutil.disk_usage("/").percent
-
-    # Update Prometheus metrics
+def collect_metrics() -> dict:
+    cpu = psutil.cpu_percent(interval=0.2)
+    memory = round(psutil.virtual_memory().percent, 2)
+    disk = round(psutil.disk_usage("/").percent, 2)
     cpu_metric.set(cpu)
     memory_metric.set(memory)
     disk_metric.set(disk)
-
-    # Check alerts
     check_alert("CPU", cpu, CPU_THRESHOLD)
     check_alert("Memory", memory, MEMORY_THRESHOLD)
     check_alert("Disk", disk, DISK_THRESHOLD)
+    return {
+        "cpu_percent": cpu,
+        "memory_percent": memory,
+        "disk_percent": disk,
+        "thresholds": {"cpu": CPU_THRESHOLD, "memory": MEMORY_THRESHOLD, "disk": DISK_THRESHOLD},
+        "timestamp": datetime.now().astimezone().isoformat(),
+    }
 
-    return Response(
-        content=generate_latest(),
-        media_type=CONTENT_TYPE_LATEST
-)
-    
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def dashboard():
+    page = Path(__file__).with_name("dashboard.html")
+    return HTMLResponse(page.read_text(encoding="utf-8"))
+
+
+@app.get("/api/info")
+def info():
+    return {
+        "project": "AutoHealOps",
+        "status": "Running",
+        "version": app.version,
+        "components": ["FastAPI", "psutil", "Prometheus", "Grafana", "Docker Compose", "PowerShell Watchdog", "Telegram"],
+        "scope": "Public demo hosts FastAPI only. Prometheus, Grafana and the host watchdog run in the local Docker Compose setup.",
+    }
+
+
+@app.get("/health")
+def health():
+    return {"status": "healthy", "timestamp": datetime.now().astimezone().isoformat()}
+
+
+@app.get("/api/metrics")
+def metrics_json():
+    return collect_metrics()
+
+
+@app.get("/metrics")
+def prometheus_metrics():
+    collect_metrics()
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
