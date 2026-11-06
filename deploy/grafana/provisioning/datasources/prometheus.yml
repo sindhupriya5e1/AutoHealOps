@@ -2,6 +2,7 @@ apiVersion: 1
 datasources:
   - name: AutoHealOps Prometheus
     type: prometheus
+    uid: prometheus
     access: proxy
     url: https://autohealops-prometheus.onrender.com
     isDefault: true
