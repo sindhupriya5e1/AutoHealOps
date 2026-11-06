@@ -36,10 +36,21 @@
     <div class="item"><span>FastAPI scrape target</span><strong id="targetStatus" class="warn">Checking…</strong></div>
     <p class="sub">This checks the public Prometheus service and its target state.</p>
   </div>
-  <div class="card"><h3 class="section-title">Self-healing recovery</h3>
-    <div class="item"><span>PowerShell watchdog</span><strong class="warn">Local host only</strong></div>
-    <div class="item"><span>Docker restart test</span><strong class="warn">Run locally</strong></div>
-    <p class="sub">The watchdog can restart the Docker container on the machine where it runs. The public Render demo cannot restart your laptop. No cloud recovery controller is configured yet.</p>
+  <div class="card"><h3 class="section-title">Self-healing recovery demo</h3>
+    <div class="item"><span>PowerShell watchdog</span><strong class="warn">Local host</strong></div>
+    <div class="item"><span>Docker restart test</span><strong class="warn">Local test</strong></div>
+    <p class="sub">Run this controlled recovery test on the project laptop. The public Render service cannot restart your personal laptop.</p>
+    <pre style="white-space:pre-wrap;background:#0b1020;border:1px solid #26334e;border-radius:10px;padding:12px;color:#bdeaf0;font-size:12px">docker compose up -d --build
+# In a second PowerShell window:
+.\\autoheal.ps1
+# In another terminal, simulate a failure:
+docker compose stop app
+# Wait up to 30 seconds, then verify:
+docker compose ps</pre>
+    <div class="links">
+      <a href="https://github.com/sindhupriya5e1/AutoHealOps/blob/main/AutoHealOps_Actual_Project_Evidence.pdf" target="_blank" rel="noopener">Recovery evidence PDF ↗</a>
+      <a href="https://github.com/sindhupriya5e1/AutoHealOps/blob/main/AutoHealOps_Architecture_Diagram.pdf" target="_blank" rel="noopener">Architecture PDF ↗</a>
+    </div>
   </div>
 </section>
 <div class="notice"><strong>Deployment scope:</strong> Public deployment: FastAPI metrics are scraped by the hosted Prometheus service and visualized in hosted Grafana. The PowerShell watchdog and Docker container-recovery demonstration run locally on the project host; they do not restart the public Render service. Public metrics describe the Render container, not your laptop.</div>
