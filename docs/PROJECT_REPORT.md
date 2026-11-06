@@ -59,7 +59,7 @@ CPU 80%, memory 80%, disk 85%. The application avoids repeated notifications whi
 ## Actual project evidence supplied
 The repository's AutoHealOps_Actual_Project_Evidence.pdf contains ten screenshots from the supplied running setup: Grafana dashboard; Prometheus CPU, memory and disk graphs; Docker Compose service status; app health endpoint; watchdog startup; container stop test; automatic recovery output; and Telegram failure/recovery notifications.
 
-The evidence PDF also shows an initial PowerShell command-not-found error before later watchdog output. The updated watchdog script is designed to discover the Compose app dynamically; repeat the controlled test to capture a clean reproducible run.
+The evidence PDF also shows an initial PowerShell command-not-found error before later watchdog output. The current watchdog script uses a configured container name (autohealops-app-1). Confirm the name shown by docker compose ps and keep $ContainerName in autoheal.ps1 aligned with it. The supplied screenshot shows a command-not-found attempt before the later watchdog output; repeat the test from the repository folder to capture a clean run.
 
 ## Public live demo and scope
 The public Render deployment hosts the FastAPI dashboard and API. It displays metrics collected from the hosted Render container. Prometheus, Grafana, Docker Compose orchestration and the PowerShell watchdog remain in the local setup. The watchdog operates on the local host and cannot restart the remote Render service.
