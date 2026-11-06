@@ -2,7 +2,7 @@
 
 AutoHealOps is a containerized DevOps monitoring and recovery project. It exposes system resource metrics through a FastAPI application, collects them with Prometheus, visualizes them in Grafana, sends threshold alerts through Telegram, and uses a PowerShell watchdog to restart an unhealthy application container.
 
-> **Scope:** This project demonstrates monitoring and recovery for the Dockerized application container. The watchdog must be running separately on the host in PowerShell.
+> **Scope:** The Docker Compose monitoring stack and PowerShell watchdog run on your own machine. The optional public Render deployment hosts the FastAPI app only; it does not automatically host Prometheus, Grafana, or the local PowerShell watchdog.
 
 ## Features
 
@@ -40,6 +40,9 @@ AutoHealOps is a containerized DevOps monitoring and recovery project. It expose
 | autoheal.ps1     |
 | Watchdog         |
 +------------------+
+
+Optional public demo:
+Browser -> Render Web Service -> FastAPI (/ and /health and /metrics)
 ```
 
 ## Technology Stack
@@ -56,6 +59,7 @@ AutoHealOps is a containerized DevOps monitoring and recovery project. It expose
 | Grafana | Metrics visualization |
 | PowerShell | Watchdog and container restart logic |
 | Telegram Bot API | Failure, recovery, and threshold notifications |
+| Render | Optional public hosting for the FastAPI demo |
 
 ## Project Structure
 
@@ -105,7 +109,7 @@ TELEGRAM_CHAT_ID=your_telegram_chat_id
 
 Keep the real `.env` file private. It is excluded from Git by `.gitignore`; never commit bot tokens or other secrets. The application still runs without Telegram credentials, but Telegram notifications will not be sent.
 
-## Run the Project
+## Run the Project Locally
 
 Run these commands from the repository root:
 
@@ -139,7 +143,29 @@ Run these commands from the repository root:
 
    Grafana's default initial login is commonly `admin` / `admin`; change the password when prompted. If the instance has already been configured, use the password set for that Grafana instance.
 
-## Configure Grafana
+## Publish a Public API Demo on Render
+
+You can deploy the FastAPI application from this GitHub repository using Render's free web-service plan for a portfolio/demo. The Dockerfile reads the hosting platform's `PORT` environment variable, so it can use Render's assigned port.
+
+1. Open [Render](https://render.com/) and sign in.
+2. Choose **New → Web Service**.
+3. Connect your GitHub account if prompted, then select `sindhupriya5e1/AutoHealOps`.
+4. Select the `main` branch.
+5. Set **Runtime** to **Docker** and the Dockerfile path to `./Dockerfile`.
+6. Choose the **Free** instance plan for a demo.
+7. Under **Advanced**, set the **Health Check Path** to `/health`.
+8. Telegram credentials are optional. To enable Telegram threshold alerts in the hosted app, add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` under Environment Variables. Never put real credentials in GitHub or this README.
+9. Click **Create Web Service** and wait for the first deploy to finish.
+10. Copy the public `onrender.com` URL shown in the Render dashboard and test:
+    - `https://YOUR-SERVICE.onrender.com/`
+    - `https://YOUR-SERVICE.onrender.com/health`
+    - `https://YOUR-SERVICE.onrender.com/metrics`
+
+**Free-plan notes:** A free Render web service can spin down after inactivity, so the first request after a quiet period may take a little time. Free services can also restart and do not provide persistent disks. This is suitable for a learning/portfolio demo, not production hosting.
+
+**What is and is not public:** This Render setup publishes the FastAPI API and its metrics endpoint. The Prometheus and Grafana services in `docker-compose.yml` remain a local demo unless you separately deploy/configure a monitoring stack. The PowerShell watchdog also remains a host-side local script; it cannot restart a Render container.
+
+## Configure Grafana Locally
 
 1. Open http://localhost:3000 and sign in.
 2. Add Prometheus as a data source.
@@ -153,7 +179,7 @@ Run these commands from the repository root:
 
 The Prometheus scrape configuration is in `prometheus/prometheus.yml`; it scrapes the application at `app:8000` every 5 seconds.
 
-## Start the Self-Healing Watchdog
+## Start the Self-Healing Watchdog Locally
 
 The watchdog is a separate host-side PowerShell process; it is not started by Docker Compose.
 
@@ -162,7 +188,7 @@ The watchdog is a separate host-side PowerShell process; it is not started by Do
 3. Run:
 
    ```powershell
-   .\autoheal.ps1
+   .\\autoheal.ps1
    ```
 
 The script checks the application container and its health every 30 seconds. If the container is unhealthy or stopped, it attempts to restart it with Docker and sends a Telegram alert. When it detects recovery, it sends a recovery notification.
@@ -181,7 +207,7 @@ The application sends a Telegram alert when a metric crosses its threshold:
 
 Thresholds are defined in `app/main.py`. The application avoids repeatedly sending the same alert while a metric remains above its threshold; it can send a new alert after the metric returns below the threshold and crosses it again.
 
-## Stop the Project
+## Stop the Local Project
 
 Stop and remove the Compose containers:
 
@@ -189,15 +215,16 @@ Stop and remove the Compose containers:
 docker compose down
 ```
 
-To also remove the Prometheus container's stored data, remove its data volume if you have configured one separately. The current Compose file does not define a persistent Prometheus or Grafana data volume, so container recreation can reset their stored state and Grafana configuration.
+The current Compose file does not define persistent Prometheus or Grafana data volumes, so container recreation can reset their stored state and Grafana configuration.
 
 ## Troubleshooting
 
-- **Compose cannot find `.env`:** Create it by copying `.env.example` to `.env`.
+- **Compose cannot find `.env`:** Create a `.env` file in the repository root as described in the Configuration section.
 - **A port is already in use:** Stop the process using port 8000, 9090, or 3000, or change the corresponding host port in `docker-compose.yml`.
 - **Prometheus cannot scrape the app:** Check `docker compose ps`, `docker compose logs app`, and that the Prometheus target is configured as `app:8000`.
 - **Telegram notifications do not arrive:** Verify the bot token and chat ID in your local `.env` file and confirm that you have started a conversation with the bot.
 - **The watchdog cannot find the container:** Run `docker compose ps` and make sure `$ContainerName` in `autoheal.ps1` matches the actual application container name.
+- **Render deployment fails:** Check the Render deploy logs, confirm Runtime is Docker, and verify the service health-check path is `/health`.
 
 ## Security Notes
 
