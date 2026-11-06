@@ -1,252 +1,155 @@
-# AutoHealOps – Automated DevOps Monitoring & Self-Healing
+# AutoHealOps — Live DevOps Monitoring & Self-Healing Demo
 
-AutoHealOps is a containerized DevOps monitoring and recovery project. It exposes system resource metrics through a FastAPI application, collects them with Prometheus, visualizes them in Grafana, sends threshold alerts through Telegram, and uses a PowerShell watchdog to restart an unhealthy application container.
+**Built by Sindhupriya Abbineni** · [GitHub repository](https://github.com/sindhupriya5e1/AutoHealOps)
 
-> **Scope:** The Docker Compose monitoring stack and PowerShell watchdog run on your own machine. The optional public Render deployment hosts the FastAPI app only; it does not automatically host Prometheus, Grafana, or the local PowerShell watchdog.
+AutoHealOps is a containerized DevOps project that monitors CPU, memory and disk usage, exposes Prometheus metrics, visualizes them in Grafana, sends threshold alerts through Telegram, and uses a PowerShell watchdog to recover an unhealthy local application container.
+
+## Live demo
+
+**[Open AutoHealOps Live Dashboard](https://autohealops-demo.onrender.com/)**
+
+- [Health check](https://autohealops-demo.onrender.com/health)
+- [Live JSON metrics](https://autohealops-demo.onrender.com/api/metrics)
+- [Prometheus exposition](https://autohealops-demo.onrender.com/metrics)
+- [Interactive API documentation](https://autohealops-demo.onrender.com/docs)
+- [Project information](https://autohealops-demo.onrender.com/api/info)
+
+The public Render deployment hosts the FastAPI application and dashboard. The resource figures on the public page belong to the hosted container. The complete Prometheus + Grafana + Docker Compose + PowerShell watchdog recovery workflow runs locally. The public service cannot monitor or restart a personal laptop.
+
+## Actual project evidence
+
+The repository includes [AutoHealOps_Actual_Project_Evidence.pdf](./AutoHealOps_Actual_Project_Evidence.pdf), containing 10 screenshots from the running setup:
+1. Grafana system dashboard (CPU, memory, disk, process memory and app health)
+2. Prometheus CPU metric query
+3. Prometheus memory metric query
+4. Prometheus disk metric query
+5. Docker Compose services and app health
+6. FastAPI /health response
+7. PowerShell watchdog startup
+8. Controlled Docker container stop test
+9. Watchdog recovery output
+10. Telegram unhealthy/recovery notifications
+
+See the [architecture diagram PDF](./AutoHealOps_Architecture_Diagram.pdf).
 
 ## Features
 
-- Monitors CPU, memory, and disk usage using `psutil`
-- Exposes Prometheus-compatible metrics at `/metrics`
-- Collects metrics with Prometheus
-- Provides a Grafana interface for dashboards and visualization
-- Provides application root and health-check endpoints
-- Sends Telegram alerts when CPU, memory, or disk usage crosses configured thresholds
-- Uses a PowerShell watchdog to check application health and attempt a Docker container restart
-- Sends Telegram notifications when the watchdog detects a failure and when the application recovers
+- FastAPI endpoints: /, /health, /api/info, /api/metrics, /metrics
+- CPU, memory and disk monitoring through psutil
+- Prometheus gauges: system_cpu_percent, system_memory_percent, system_disk_percent
+- Prometheus scraping every 5 seconds and Grafana dashboards
+- Telegram threshold alerts (CPU 80%, memory 80%, disk 85%)
+- Host-side PowerShell watchdog checks health every 30 seconds
+- Watchdog discovers the Compose app container dynamically and attempts recovery
+- Public dashboard refreshes hosted API metrics every 5 seconds
 
 ## Architecture
 
-```text
-                         +----------------------+
-                         |     Grafana          |
-                         |   localhost:3000     |
-                         +----------+-----------+
-                                    |
-                                    | queries
-                                    v
-+------------------+      scrape   +----------------------+
-| FastAPI app      | <-------------| Prometheus           |
-| /health          |               | localhost:9090       |
-| /metrics         |               +----------------------+
-| CPU / Memory /   |
-| Disk metrics     |------ threshold alerts ------> Telegram Bot
-+--------+---------+
-         ^
-         | health check / Docker restart
-         |
-+--------+---------+
-| PowerShell       |
-| autoheal.ps1     |
-| Watchdog         |
-+------------------+
+    LOCAL DOCKER COMPOSE
+    FastAPI + psutil -- /metrics --> Prometheus -- queries --> Grafana
+          |                             
+          +-- threshold alerts --> Telegram Bot
+          ^
+          | health checks / restart
+    PowerShell watchdog -- docker compose restart app / up -d app
 
-Optional public demo:
-Browser -> Render Web Service -> FastAPI (/ and /health and /metrics)
-```
+    PUBLIC PORTFOLIO DEMO
+    Browser --> Render --> FastAPI dashboard + /health + /api/metrics + /metrics
 
-## Technology Stack
+## Technology stack
 
-| Component | Purpose |
+| Technology | Role |
 |---|---|
-| Python | Monitoring application |
-| FastAPI | HTTP API and health endpoint |
-| psutil | CPU, memory, and disk metrics |
-| Prometheus Client | Exposes application metrics |
-| Docker | Containerizes the application |
-| Docker Compose | Runs the application, Prometheus, and Grafana |
-| Prometheus | Scrapes and stores metrics |
-| Grafana | Metrics visualization |
-| PowerShell | Watchdog and container restart logic |
-| Telegram Bot API | Failure, recovery, and threshold notifications |
-| Render | Optional public hosting for the FastAPI demo |
+| Python 3.12 | Application runtime |
+| FastAPI + Uvicorn | API and dashboard server |
+| psutil | CPU, memory and disk measurements |
+| prometheus-client | Prometheus metric exposition |
+| Prometheus | Local metrics scraping and storage |
+| Grafana | Local dashboards and visualization |
+| Docker + Docker Compose | Containerization and local orchestration |
+| PowerShell | Host-side health watchdog and recovery |
+| Telegram Bot API | Threshold, failure and recovery notifications |
+| Render | Public FastAPI demo hosting |
+| GitHub | Source control and documentation |
 
-## Project Structure
+## Run the complete stack locally
 
-```text
-AutoHealOps/
-├── app/
-│   └── main.py
-├── prometheus/
-│   └── prometheus.yml
-├── autoheal.ps1
-├── docker-compose.yml
-├── Dockerfile
-├── requirements.txt
-├── .gitignore
-└── README.md
-```
+### Prerequisites
+- Docker Desktop with WSL integration enabled (Windows) or Docker Engine + Compose
+- PowerShell 5.1+ / PowerShell 7+
+- Telegram bot credentials if notifications are required
 
-## Prerequisites
+Create a private .env file in the repository root:
 
-Install the following on your machine:
+    TELEGRAM_BOT_TOKEN=your_bot_token
+    TELEGRAM_CHAT_ID=your_chat_id
 
-- Docker Desktop (or Docker Engine) with the Docker Compose plugin
-- PowerShell 5.1 or later (or PowerShell 7+)
-- A Telegram account and a Telegram bot if you want to receive notifications
+Keep .env private; it is excluded from Git. The app can run without Telegram credentials, but the current Compose file expects the .env file to exist.
 
-Check the installations:
+### Start services
 
-```bash
-docker --version
-docker compose version
-```
+    docker compose up -d --build
+    docker compose ps
 
-In PowerShell, check:
+Open:
+| Component | Local URL |
+|---|---|
+| App dashboard | http://localhost:8000/ |
+| Health | http://localhost:8000/health |
+| JSON metrics | http://localhost:8000/api/metrics |
+| Prometheus metrics | http://localhost:8000/metrics |
+| Prometheus UI | http://localhost:9090 |
+| Grafana UI | http://localhost:3000 |
 
-```powershell
-$PSVersionTable.PSVersion
-```
+Configure Grafana's Prometheus data source as http://prometheus:9090 from inside the Grafana container. Useful queries: system_cpu_percent, system_memory_percent, system_disk_percent.
 
-## Configuration
+### Start the watchdog
 
-The Compose configuration expects a local `.env` file. Create a file named `.env` in the repository root and add your Telegram credentials:
+In a separate PowerShell window at the repository root:
 
-```env
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-TELEGRAM_CHAT_ID=your_telegram_chat_id
-```
+    .\autoheal.ps1
 
-Keep the real `.env` file private. It is excluded from Git by `.gitignore`; never commit bot tokens or other secrets. The application still runs without Telegram credentials, but Telegram notifications will not be sent.
+The watchdog discovers the app container with docker compose ps -q app, checks http://localhost:8000/health every 30 seconds, and attempts docker compose restart app if unhealthy. If the container is missing, it attempts docker compose up -d app. Telegram notifications are optional for the watchdog.
 
-## Run the Project Locally
+### Controlled recovery test
 
-Run these commands from the repository root:
+1. Confirm docker compose ps shows the app healthy.
+2. Start .\autoheal.ps1 in PowerShell.
+3. In another terminal run docker compose stop app.
+4. Wait for the watchdog's next check (up to 30 seconds).
+5. Confirm it attempts recovery and then reports healthy after the next successful health check.
+6. Check Telegram for unhealthy and recovered messages if configured.
 
-1. Build the application image and start all services:
+Perform this controlled test only in the local demo environment.
 
-   ```bash
-   docker compose up -d --build
-   ```
-
-2. Check service status:
-
-   ```bash
-   docker compose ps
-   ```
-
-3. View application logs:
-
-   ```bash
-   docker compose logs -f app
-   ```
-
-4. Open the service endpoints:
-
-   | Service | URL |
-   |---|---|
-   | FastAPI home | http://localhost:8000/ |
-   | Health check | http://localhost:8000/health |
-   | Prometheus metrics | http://localhost:8000/metrics |
-   | Prometheus UI | http://localhost:9090 |
-   | Grafana UI | http://localhost:3000 |
-
-   Grafana's default initial login is commonly `admin` / `admin`; change the password when prompted. If the instance has already been configured, use the password set for that Grafana instance.
-
-## Public Live Demo
-
-<https://autohealops-demo.onrender.com>
-
-The FastAPI application is deployed and live on Render. The root endpoint has returned HTTP 200 in the deployment logs.
-
-- [Open API home](https://autohealops-demo.onrender.com/)
-- [Health endpoint](https://autohealops-demo.onrender.com/health)
-- [Prometheus metrics endpoint](https://autohealops-demo.onrender.com/metrics)
-- [Render service dashboard](https://dashboard.render.com/web/srv-dbmo64qjnfac73b1lrc0)
-
-The Render deployment publishes the FastAPI API only. Prometheus, Grafana, and the PowerShell watchdog remain part of the local Docker Compose setup unless separately deployed/configured.
-
-## Publish a Public API Demo on Render
-
-You can deploy the FastAPI application from this GitHub repository using Render's free web-service plan for a portfolio/demo. The Dockerfile reads the hosting platform's `PORT` environment variable, so it can use Render's assigned port.
-
-1. Open [Render](https://render.com/) and sign in.
-2. Choose **New → Web Service**.
-3. Connect your GitHub account if prompted, then select `sindhupriya5e1/AutoHealOps`.
-4. Select the `main` branch.
-5. Set **Runtime** to **Docker** and the Dockerfile path to `./Dockerfile`.
-6. Choose the **Free** instance plan for a demo.
-7. Under **Advanced**, set the **Health Check Path** to `/health`.
-8. Telegram credentials are optional. To enable Telegram threshold alerts in the hosted app, add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` under Environment Variables. Never put real credentials in GitHub or this README.
-9. Click **Create Web Service** and wait for the first deploy to finish.
-10. Copy the public `onrender.com` URL shown in the Render dashboard and test:
-    - `https://YOUR-SERVICE.onrender.com/`
-    - `https://YOUR-SERVICE.onrender.com/health`
-    - `https://YOUR-SERVICE.onrender.com/metrics`
-
-**Free-plan notes:** A free Render web service can spin down after inactivity, so the first request after a quiet period may take a little time. Free services can also restart and do not provide persistent disks. This is suitable for a learning/portfolio demo, not production hosting.
-
-**What is and is not public:** This Render setup publishes the FastAPI API and its metrics endpoint. The Prometheus and Grafana services in `docker-compose.yml` remain a local demo unless you separately deploy/configure a monitoring stack. The PowerShell watchdog also remains a host-side local script; it cannot restart a Render container.
-
-## Configure Grafana Locally
-
-1. Open http://localhost:3000 and sign in.
-2. Add Prometheus as a data source.
-3. Set the Prometheus server URL to `http://prometheus:9090` (the Compose service name is reachable from the Grafana container).
-4. Save and test the data source.
-5. Create a dashboard and add queries such as:
-
-   - CPU usage: `system_cpu_percent`
-   - Memory usage: `system_memory_percent`
-   - Disk usage: `system_disk_percent`
-
-The Prometheus scrape configuration is in `prometheus/prometheus.yml`; it scrapes the application at `app:8000` every 5 seconds.
-
-## Start the Self-Healing Watchdog Locally
-
-The watchdog is a separate host-side PowerShell process; it is not started by Docker Compose.
-
-1. Make sure the Compose services are running.
-2. Open PowerShell in the repository root.
-3. Run:
-
-   ```powershell
-   .\\autoheal.ps1
-   ```
-
-The script checks the application container and its health every 30 seconds. If the container is unhealthy or stopped, it attempts to restart it with Docker and sends a Telegram alert. When it detects recovery, it sends a recovery notification.
-
-**Important:** The script currently targets the Compose container name `autohealops-app-1`. If your Compose project uses a different project name or container name, update the `$ContainerName` value in `autoheal.ps1` to match the name shown by `docker compose ps`. Keep the watchdog PowerShell window running while you want recovery checks to continue.
-
-## Alert Thresholds
-
-The application sends a Telegram alert when a metric crosses its threshold:
+## Alert thresholds
 
 | Metric | Threshold |
 |---|---:|
-| CPU usage | 80% |
-| Memory usage | 80% |
-| Disk usage | 85% |
+| CPU | 80% |
+| Memory | 80% |
+| Disk | 85% |
 
-Thresholds are defined in `app/main.py`. The application avoids repeatedly sending the same alert while a metric remains above its threshold; it can send a new alert after the metric returns below the threshold and crosses it again.
+An alert is sent when a metric first crosses its threshold. It can alert again after the value falls below the threshold and crosses again.
 
-## Stop the Local Project
+## Deployment notes and limitations
 
-Stop and remove the Compose containers:
+- Render hosts the FastAPI dashboard/API only. Public /metrics exposes metrics for the Render container.
+- Prometheus, Grafana and the PowerShell watchdog remain part of the local Compose setup.
+- Render free instances may spin down after inactivity and may restart. This is a portfolio demo, not production-grade monitoring.
+- The host watchdog cannot restart the remote Render service.
+- The current Compose file does not persist Prometheus or Grafana data.
 
-```bash
-docker compose down
-```
+## Project evidence and source
 
-The current Compose file does not define persistent Prometheus or Grafana data volumes, so container recreation can reset their stored state and Grafana configuration.
+- [Actual project evidence screenshots (PDF)](./AutoHealOps_Actual_Project_Evidence.pdf)
+- [Architecture diagram (PDF)](./AutoHealOps_Architecture_Diagram.pdf)
+- [Project report](./docs/PROJECT_REPORT.md)
+- [Demo verification guide](./docs/DEMO_GUIDE.md)
+- [FastAPI application](./app/main.py)
+- [PowerShell watchdog](./autoheal.ps1)
+- [Prometheus config](./prometheus/prometheus.yml)
 
-## Troubleshooting
+## Security
 
-- **Compose cannot find `.env`:** Create a `.env` file in the repository root as described in the Configuration section.
-- **A port is already in use:** Stop the process using port 8000, 9090, or 3000, or change the corresponding host port in `docker-compose.yml`.
-- **Prometheus cannot scrape the app:** Check `docker compose ps`, `docker compose logs app`, and that the Prometheus target is configured as `app:8000`.
-- **Telegram notifications do not arrive:** Verify the bot token and chat ID in your local `.env` file and confirm that you have started a conversation with the bot.
-- **The watchdog cannot find the container:** Run `docker compose ps` and make sure `$ContainerName` in `autoheal.ps1` matches the actual application container name.
-- **Render deployment fails:** Check the Render deploy logs, confirm Runtime is Docker, and verify the service health-check path is `/health`.
-
-## Security Notes
-
-- Do not commit `.env` or publish Telegram bot tokens.
-- Use a unique, secure Grafana password.
-- For a production deployment, add authentication, TLS, persistent storage, resource limits, and managed secret handling.
-
-## Author
-
-**Sindhupriya Abbineni**
-
-GitHub: [@sindhupriya5e1](https://github.com/sindhupriya5e1)
+Never commit Telegram tokens, chat IDs, passwords or .env. Use authentication, secure secrets and persistent storage before adapting this learning demo for production.
